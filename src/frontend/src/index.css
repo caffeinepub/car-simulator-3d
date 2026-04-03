@@ -1,0 +1,70 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+@font-face {
+  font-family: "BricolageGrotesque";
+  src: url("/assets/fonts/BricolageGrotesque.woff2") format("woff2");
+  font-weight: 200 800;
+  font-display: swap;
+}
+
+@layer base {
+  :root {
+    --radius: 0.5rem;
+    /* Game dark theme */
+    --background: 0.08 0 0;
+    --foreground: 0.97 0 0;
+    --card: 0.12 0 0;
+    --card-foreground: 0.97 0 0;
+    --popover: 0.12 0 0;
+    --popover-foreground: 0.97 0 0;
+    --primary: 0.72 0.18 210;
+    --primary-foreground: 0.97 0 0;
+    --secondary: 0.18 0 0;
+    --secondary-foreground: 0.97 0 0;
+    --muted: 0.18 0 0;
+    --muted-foreground: 0.65 0 0;
+    --accent: 0.75 0.14 55;
+    --accent-foreground: 0.08 0 0;
+    --destructive: 0.62 0.22 25;
+    --destructive-foreground: 0.97 0 0;
+    --border: 0.28 0 0;
+    --input: 0.28 0 0;
+    --ring: 0.72 0.18 210;
+    --chart-1: 0.72 0.18 210;
+    --chart-2: 0.75 0.14 55;
+    --chart-3: 0.62 0.22 25;
+    --chart-4: 0.6 0.18 160;
+    --chart-5: 0.55 0.2 300;
+    --sidebar: 0.12 0 0;
+    --sidebar-foreground: 0.97 0 0;
+    --sidebar-primary: 0.72 0.18 210;
+    --sidebar-primary-foreground: 0.97 0 0;
+    --sidebar-accent: 0.18 0 0;
+    --sidebar-accent-foreground: 0.97 0 0;
+    --sidebar-border: 0.28 0 0;
+    --sidebar-ring: 0.72 0.18 210;
+  }
+
+  * {
+    @apply border-border;
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+  }
+
+  html,
+  body,
+  #root {
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+  }
+
+  body {
+    background: #000;
+    @apply text-foreground;
+    font-family: "BricolageGrotesque", "General Sans", system-ui, sans-serif;
+  }
+}
