@@ -7,5 +7,15 @@ export interface None {
     __kind__: "None";
 }
 export type Option<T> = Some<T> | None;
+
+export interface LeaderboardEntry {
+    rank: bigint;
+    name: string;
+    timeMs: bigint;
+    timestamp: bigint;
+}
+
 export interface backendInterface {
+    submitLapTime: (name: string, timeMs: bigint) => Promise<boolean>;
+    getLeaderboard: () => Promise<LeaderboardEntry[]>;
 }

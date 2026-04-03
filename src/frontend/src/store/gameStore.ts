@@ -11,6 +11,8 @@ export interface GameState {
   currentLapTime: number; // seconds
   bestLapTime: number | null; // seconds, null = no lap completed yet
   lapStartTime: number | null; // performance.now() timestamp
+  showLeaderboard: boolean;
+  newBestPending: boolean; // true when player just set a new best and hasn't submitted yet
 }
 
 let state: GameState = {
@@ -24,6 +26,8 @@ let state: GameState = {
   currentLapTime: 0,
   bestLapTime: null,
   lapStartTime: null,
+  showLeaderboard: false,
+  newBestPending: false,
 };
 
 const listeners = new Set<() => void>();

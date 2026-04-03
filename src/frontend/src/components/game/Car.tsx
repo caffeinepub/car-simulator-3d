@@ -134,16 +134,17 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
         // Subsequent crossings: record lap
         const lapTimeSec = (now - _lapStartTime) / 1000;
         const gs = getGameState();
-        const newBest =
-          gs.bestLapTime === null || lapTimeSec < gs.bestLapTime
-            ? lapTimeSec
-            : gs.bestLapTime;
+        const isNewBest =
+          gs.bestLapTime === null || lapTimeSec < gs.bestLapTime;
+        const newBest = isNewBest ? lapTimeSec : gs.bestLapTime;
         _lapStartTime = now;
         setGameState({
           lapCount: gs.lapCount + 1,
           currentLapTime: 0,
           bestLapTime: newBest,
           lapStartTime: now,
+          // If it's a new best, mark as pending submission
+          ...(isNewBest ? { newBestPending: true } : {}),
         });
       }
     }

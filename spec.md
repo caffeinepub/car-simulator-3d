@@ -1,40 +1,38 @@
 # Car Simulator 3D
 
 ## Current State
-A 3D open-world car simulator with:
-- Straight 2km road with trees, buildings, mountains
-- WASD/Arrow key driving controls
-- HUD: speedometer, gear, compass, mini-map, day/night toggle
-- GameStore with speed, gear, heading, isDay, gameStarted, distance
+- React Three Fiber 3D car simulator with oval race track
+- Lap timer (current/best) tracked in frontend-only `gameStore.ts` state
+- Speedometer, gear, compass, mini-map HUD
+- No persistent storage -- best lap time is lost on refresh
+- No opponent cars
+- Backend is empty (`backendInterface {}`)
 
 ## Requested Changes (Diff)
 
 ### Add
-- Oval race circuit track replacing the straight road
-- Lap timer (mm:ss.ms format) displayed on HUD
-- Best lap time tracking and display
-- Lap counter (current lap / total)
-- Start/finish line on the track with a visible marker
-- Checkpoint system to detect valid laps (must cross start/finish going forward)
-- Track-side barriers/curbs
+- **AI opponent cars**: 3 AI-controlled cars that drive around the oval track at varying speeds, with different body colors. They follow a simple waypoint path along the track centerline. They do not interact with the player car (no collision). They are purely visual.
+- **Persistent leaderboard**: A top-10 leaderboard that stores best lap times on the ICP backend. Players enter a name when they set a new personal best. The leaderboard shows rank, player name, lap time, and date. It is accessible via a HUD button at top-left or auto-shows after a new personal best.
+- **Submit best lap time flow**: After crossing the finish line and completing a lap that is a new personal best, prompt the player to enter a name (short text input) and submit to the leaderboard.
 
 ### Modify
-- World.tsx: replace straight road with oval circuit using track segments
-- GameStore: add lapTime, bestLapTime, currentLap, lapStartTime fields
-- Car.tsx: add checkpoint/lap crossing detection logic
-- HUD.tsx: add lap timer panel to the display
-- Car starting position placed on track start/finish straight
-- Mini-map updated to show oval track shape
+- `gameStore.ts`: Add `showLeaderboard: boolean` flag and `personalBestSubmitted: boolean` to state.
+- `HUD.tsx`: Add leaderboard toggle button and personal best submission modal.
+- `CarSimulator.tsx`: Add `<AITraffic />` component to the Canvas.
+- Backend `main.mo`: Implement leaderboard storage with submit and query endpoints.
 
 ### Remove
-- Straight 2km road geometry
-- Road center dashes for straight road
+- Nothing removed.
 
 ## Implementation Plan
-1. Update GameState interface with lap fields: lapCount, currentLapTime, bestLapTime, lapStartTime
-2. Build oval track in World.tsx: two long straights + two semicircular ends using boxGeometry segments
-3. Add start/finish line visual marker
-4. In Car.tsx: detect when car crosses start/finish line (z crossing threshold near x=0) and record lap times
-5. Update HUD.tsx: lap timer panel showing current lap time, best lap, lap counter
-6. Update mini-map SVG to show oval track outline
-7. Adjust car spawn position to track start/finish line
+
+### Backend (Motoko)
+- `submitLapTime(name: Text, timeMs: Nat): async Bool` -- stores entry, keeps top 10 globally
+- `getLeaderboard(): async [LeaderboardEntry]` -- returns top 10 sorted by time ascending
+- `LeaderboardEntry` type: `{ rank: Nat; name: Text; timeMs: Nat; timestamp: Int }`
+
+### Frontend
+1. **`AITraffic.tsx`** (new) -- Three.js component with 3 AI cars placed as groups on the oval track. Each AI car has its own module-level state (position along track parameterized as 0..1 t-value). Per frame they advance t at their fixed speed and their positions/rotations are computed from the track curve formula matching `TRACK` constants in `World.tsx`. Different colors: red, green, orange.
+2. **`gameStore.ts`** -- add `showLeaderboard`, `personalBestSubmitted` flags.
+3. **`HUD.tsx`** -- add "LEADERBOARD" button (top-right area or near lap timer). Overlay panel that fetches and displays leaderboard from backend. After a new best lap, show modal: name input + submit button that calls `backend.submitLapTime`.
+4. Wire `backend.ts` calls for leaderboard submit and query.

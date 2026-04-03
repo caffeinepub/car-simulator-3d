@@ -3,6 +3,7 @@ import { AnimatePresence, motion } from "motion/react";
 import { Suspense, useCallback, useEffect, useRef } from "react";
 import type * as THREE from "three";
 import { setGameState, useGameStore } from "../../store/gameStore";
+import AITraffic from "./AITraffic";
 import CameraRig from "./CameraRig";
 import Car from "./Car";
 import HUD from "./HUD";
@@ -232,6 +233,7 @@ export default function CarSimulator() {
           <Lighting isDay={isDay} />
           <World isDay={isDay} />
           <Car keysRef={keysRef} carGroupRef={carGroupRef} />
+          <AITraffic />
           <CameraRig carGroupRef={carGroupRef} />
         </Suspense>
       </Canvas>
