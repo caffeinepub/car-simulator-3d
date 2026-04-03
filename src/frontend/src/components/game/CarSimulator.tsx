@@ -1,7 +1,7 @@
 import { Canvas } from "@react-three/fiber";
 import { AnimatePresence, motion } from "motion/react";
 import { Suspense, useCallback, useEffect, useRef } from "react";
-import type * as THREE from "three";
+import * as THREE from "three";
 import { setGameState, useGameStore } from "../../store/gameStore";
 import AITraffic from "./AITraffic";
 import CameraRig from "./CameraRig";
@@ -192,9 +192,41 @@ export default function CarSimulator() {
   const { isDay, gameStarted } = useGameStore();
   const keysRef = useRef<Record<string, boolean>>({});
   const carGroupRef = useRef<THREE.Group>(null);
+  // Shared AI positions array updated each frame by AITraffic
+  const aiPositionsRef = useRef<THREE.Vector3[]>([
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+    new THREE.Vector3(),
+  ]);
+  const countdownTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
+
+  const startCountdown = useCallback(() => {
+    setGameState({ countdownActive: true, countdownValue: 3 });
+    let step = 3;
+    const tick = () => {
+      step--;
+      if (step > 0) {
+        setGameState({ countdownValue: step });
+        countdownTimerRef.current = setTimeout(tick, 1000);
+      } else {
+        setGameState({ countdownValue: "GO" });
+        countdownTimerRef.current = setTimeout(() => {
+          setGameState({ countdownActive: false, countdownValue: null });
+        }, 900);
+      }
+    };
+    countdownTimerRef.current = setTimeout(tick, 1000);
+  }, []);
 
   const startGame = useCallback(() => {
     setGameState({ gameStarted: true });
+    startCountdown();
+  }, [startCountdown]);
+
+  useEffect(() => {
+    return () => {
+      if (countdownTimerRef.current) clearTimeout(countdownTimerRef.current);
+    };
   }, []);
 
   useEffect(() => {
@@ -232,8 +264,12 @@ export default function CarSimulator() {
         <Suspense fallback={null}>
           <Lighting isDay={isDay} />
           <World isDay={isDay} />
-          <Car keysRef={keysRef} carGroupRef={carGroupRef} />
-          <AITraffic />
+          <Car
+            keysRef={keysRef}
+            carGroupRef={carGroupRef}
+            aiPositionsRef={aiPositionsRef}
+          />
+          <AITraffic aiPositionsRef={aiPositionsRef} />
           <CameraRig carGroupRef={carGroupRef} />
         </Suspense>
       </Canvas>

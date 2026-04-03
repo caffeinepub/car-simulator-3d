@@ -852,6 +852,8 @@ export default function HUD() {
     lapStartTime,
     showLeaderboard,
     newBestPending,
+    countdownActive,
+    countdownValue,
   } = useGameStore();
   const { actor } = useActor();
 
@@ -1202,6 +1204,52 @@ export default function HUD() {
           MINI MAP
         </div>
       </div>
+
+      {/* Race countdown overlay */}
+      {countdownActive && countdownValue !== null && (
+        <div
+          style={{
+            position: "absolute",
+            inset: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            pointerEvents: "none",
+            zIndex: 12,
+          }}
+        >
+          <div
+            key={String(countdownValue)}
+            style={{
+              fontSize:
+                countdownValue === "GO"
+                  ? "clamp(5rem,18vw,11rem)"
+                  : "clamp(7rem,22vw,14rem)",
+              fontWeight: 900,
+              letterSpacing: "-0.04em",
+              color:
+                countdownValue === "GO"
+                  ? "#27ae60"
+                  : countdownValue === 1
+                    ? "#FF4D3A"
+                    : "#F5B400",
+              textShadow:
+                countdownValue === "GO"
+                  ? "0 0 60px rgba(39,174,96,0.7), 0 0 120px rgba(39,174,96,0.3)"
+                  : countdownValue === 1
+                    ? "0 0 60px rgba(255,77,58,0.7), 0 0 120px rgba(255,77,58,0.3)"
+                    : "0 0 60px rgba(245,180,0,0.7), 0 0 120px rgba(245,180,0,0.3)",
+              fontFamily: "'BricolageGrotesque', system-ui, sans-serif",
+              animation:
+                "countdownPop 0.3s cubic-bezier(0.34,1.56,0.64,1) forwards",
+              userSelect: "none",
+            }}
+          >
+            {countdownValue}
+          </div>
+          <style>{}</style>
+        </div>
+      )}
 
       {/* Leaderboard overlay */}
       {showLeaderboard && (

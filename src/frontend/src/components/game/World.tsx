@@ -58,6 +58,11 @@ export const TRACK = {
 // Module-level fog object (created once, color mutated reactively)
 const sceneFog = new THREE.FogExp2(0xc8d8e8, 0.003);
 
+// Module-level shared materials (created once)
+const dashYellowMat = new THREE.MeshLambertMaterial({ color: "#f0e880" });
+const sfWhiteMat = new THREE.MeshLambertMaterial({ color: "#ffffff" });
+const sfBlackMat = new THREE.MeshLambertMaterial({ color: "#111111" });
+
 function OvalTrack() {
   const { straightHalfLen, curveRadius, width } = TRACK;
 
@@ -133,6 +138,14 @@ function OvalTrack() {
     () => new THREE.MeshLambertMaterial({ color: "#ecf0f1" }),
     [],
   );
+  const gantryRedMat = useMemo(
+    () => new THREE.MeshLambertMaterial({ color: "#c0392b" }),
+    [],
+  );
+  const pitLineMat = useMemo(
+    () => new THREE.MeshLambertMaterial({ color: "#27ae60" }),
+    [],
+  );
 
   const dashPositions = useMemo(() => {
     const dashes: number[] = [];
@@ -142,6 +155,10 @@ function OvalTrack() {
     }
     return dashes;
   }, [straightHalfLen]);
+
+  // Geometry objects - created once
+  const dashGeo = useMemo(() => new THREE.BoxGeometry(0.25, 0.04, 5), []);
+  const sfTileGeo = useMemo(() => new THREE.BoxGeometry(2, 0.05, 2), []);
 
   return (
     <>
@@ -187,10 +204,9 @@ function OvalTrack() {
         <mesh
           key={`dash-m-${z}`}
           position={[0, 0.08, z]}
-          material={new THREE.MeshLambertMaterial({ color: "#f0e880" })}
-        >
-          <boxGeometry args={[0.25, 0.04, 5]} />
-        </mesh>
+          geometry={dashGeo}
+          material={dashYellowMat}
+        />
       ))}
 
       {/* Center dashes - back straight */}
@@ -198,10 +214,9 @@ function OvalTrack() {
         <mesh
           key={`dash-b-${z}`}
           position={[curveRadius * 2, 0.08, z]}
-          material={new THREE.MeshLambertMaterial({ color: "#f0e880" })}
-        >
-          <boxGeometry args={[0.25, 0.04, 5]} />
-        </mesh>
+          geometry={dashGeo}
+          material={dashYellowMat}
+        />
       ))}
 
       {/* ---- Curved end sections ---- */}
@@ -257,33 +272,36 @@ function OvalTrack() {
         <mesh
           key={`sf-${col}`}
           position={[-width / 2 + col * 2 + 1, 0.09, TRACK.startLineZ]}
-          material={
-            new THREE.MeshLambertMaterial({
-              color: col % 2 === 0 ? "#ffffff" : "#111111",
-            })
-          }
-        >
-          <boxGeometry args={[2, 0.05, 2]} />
-        </mesh>
+          geometry={sfTileGeo}
+          material={col % 2 === 0 ? sfWhiteMat : sfBlackMat}
+        />
       ))}
       {/* Green pit-lane line in front of start */}
-      <mesh position={[0, 0.09, TRACK.startLineZ - 6]}>
+      <mesh position={[0, 0.09, TRACK.startLineZ - 6]} material={pitLineMat}>
         <boxGeometry args={[width, 0.04, 0.6]} />
-        <meshLambertMaterial color="#27ae60" />
       </mesh>
 
       {/* ---- Pit lane / Start gantry arch ---- */}
-      <mesh position={[-width / 2 - 0.5, 4, TRACK.startLineZ]} castShadow>
+      <mesh
+        position={[-width / 2 - 0.5, 4, TRACK.startLineZ]}
+        castShadow
+        material={gantryRedMat}
+      >
         <boxGeometry args={[0.5, 8, 0.5]} />
-        <meshLambertMaterial color="#c0392b" />
       </mesh>
-      <mesh position={[width / 2 + 0.5, 4, TRACK.startLineZ]} castShadow>
+      <mesh
+        position={[width / 2 + 0.5, 4, TRACK.startLineZ]}
+        castShadow
+        material={gantryRedMat}
+      >
         <boxGeometry args={[0.5, 8, 0.5]} />
-        <meshLambertMaterial color="#c0392b" />
       </mesh>
-      <mesh position={[0, 8.1, TRACK.startLineZ]} castShadow>
+      <mesh
+        position={[0, 8.1, TRACK.startLineZ]}
+        castShadow
+        material={gantryRedMat}
+      >
         <boxGeometry args={[width + 1.5, 0.5, 0.5]} />
-        <meshLambertMaterial color="#c0392b" />
       </mesh>
     </>
   );
@@ -390,6 +408,27 @@ export default function World({ isDay }: WorldProps) {
     () => new THREE.MeshLambertMaterial({ color: "#2d7a4f" }),
     [],
   );
+  const groundMat = useMemo(
+    () => new THREE.MeshLambertMaterial({ color: "#3a6b45" }),
+    [],
+  );
+  const infieldMat = useMemo(
+    () => new THREE.MeshLambertMaterial({ color: "#2d5a38" }),
+    [],
+  );
+  const windowMat = useMemo(
+    () =>
+      new THREE.MeshBasicMaterial({
+        color: "#1a2030",
+        opacity: 0.6,
+        transparent: true,
+      }),
+    [],
+  );
+  const rockMat = useMemo(
+    () => new THREE.MeshLambertMaterial({ color: "#7a7060" }),
+    [],
+  );
 
   return (
     <>
@@ -408,9 +447,9 @@ export default function World({ isDay }: WorldProps) {
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
         position={[0, -0.05, 0]}
+        material={groundMat}
       >
         <planeGeometry args={[3000, 3000]} />
-        <meshLambertMaterial color="#3a6b45" />
       </mesh>
 
       {/* Infield grass */}
@@ -418,11 +457,11 @@ export default function World({ isDay }: WorldProps) {
         rotation={[-Math.PI / 2, 0, 0]}
         receiveShadow
         position={[curveRadius, -0.01, 0]}
+        material={infieldMat}
       >
         <planeGeometry
           args={[curveRadius * 2 - 20, straightHalfLen * 2 - 10]}
         />
-        <meshLambertMaterial color="#2d5a38" />
       </mesh>
 
       {/* Oval race track */}
@@ -460,9 +499,8 @@ export default function World({ isDay }: WorldProps) {
             <boxGeometry args={[b.w, b.h, b.d]} />
             <meshLambertMaterial color={b.color} />
           </mesh>
-          <mesh position={[0, 0, b.d / 2 + 0.05]}>
+          <mesh position={[0, 0, b.d / 2 + 0.05]} material={windowMat}>
             <planeGeometry args={[b.w * 0.85, b.h * 0.85]} />
-            <meshBasicMaterial color="#1a2030" opacity={0.6} transparent />
           </mesh>
         </group>
       ))}
@@ -486,9 +524,9 @@ export default function World({ isDay }: WorldProps) {
           position={[rock.x, 0.15, rock.z]}
           scale={rock.scale}
           castShadow
+          material={rockMat}
         >
           <dodecahedronGeometry args={[0.4, 0]} />
-          <meshLambertMaterial color="#7a7060" />
         </mesh>
       ))}
     </>

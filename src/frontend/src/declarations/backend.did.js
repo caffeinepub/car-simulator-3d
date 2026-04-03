@@ -8,10 +8,31 @@
 
 import { IDL } from '@icp-sdk/core/candid';
 
-export const idlService = IDL.Service({});
+const LeaderboardEntry = IDL.Record({
+  rank: IDL.Nat,
+  name: IDL.Text,
+  timeMs: IDL.Nat,
+  timestamp: IDL.Int,
+});
+
+export const idlService = IDL.Service({
+  submitLapTime: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
+  getLeaderboard: IDL.Func([], [IDL.Vec(LeaderboardEntry)], ['query']),
+});
 
 export const idlInitArgs = [];
 
-export const idlFactory = ({ IDL }) => { return IDL.Service({}); };
+export const idlFactory = ({ IDL }) => {
+  const LeaderboardEntry = IDL.Record({
+    rank: IDL.Nat,
+    name: IDL.Text,
+    timeMs: IDL.Nat,
+    timestamp: IDL.Int,
+  });
+  return IDL.Service({
+    submitLapTime: IDL.Func([IDL.Text, IDL.Nat], [IDL.Bool], []),
+    getLeaderboard: IDL.Func([], [IDL.Vec(LeaderboardEntry)], ['query']),
+  });
+};
 
 export const init = ({ IDL }) => { return []; };

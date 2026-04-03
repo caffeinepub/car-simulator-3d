@@ -13,6 +13,8 @@ export interface GameState {
   lapStartTime: number | null; // performance.now() timestamp
   showLeaderboard: boolean;
   newBestPending: boolean; // true when player just set a new best and hasn't submitted yet
+  countdownActive: boolean;
+  countdownValue: number | "GO" | null;
 }
 
 let state: GameState = {
@@ -28,6 +30,8 @@ let state: GameState = {
   lapStartTime: null,
   showLeaderboard: false,
   newBestPending: false,
+  countdownActive: false,
+  countdownValue: null,
 };
 
 const listeners = new Set<() => void>();

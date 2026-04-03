@@ -7,6 +7,7 @@ import { TRACK } from "./World";
 interface CarProps {
   keysRef: React.RefObject<Record<string, boolean>>;
   carGroupRef: React.RefObject<THREE.Group | null>;
+  aiPositionsRef: React.MutableRefObject<THREE.Vector3[]>;
 }
 
 const CAR_COLOR = "#1a3a6c";
@@ -16,6 +17,9 @@ const WHEEL_HUB_COLOR = "#8a8a8a";
 const GLASS_COLOR = "#3a6080";
 const HEADLIGHT_COLOR = "#fffae0";
 const TAIL_COLOR = "#ff2200";
+
+// Collision radius (half car length ~ 2.1 + margin)
+const COLLISION_DIST = 3.8;
 
 export interface CarState {
   position: THREE.Vector3;
@@ -30,7 +34,11 @@ let _prevZ = 0;
 let _lapActive = false;
 let _lapStartTime: number | null = null;
 
-export default function Car({ keysRef, carGroupRef }: CarProps) {
+export default function Car({
+  keysRef,
+  carGroupRef,
+  aiPositionsRef,
+}: CarProps) {
   const carState = useRef<CarState>({
     position: new THREE.Vector3(0, 0.45, TRACK.startLineZ - 10),
     rotation: 0,
@@ -49,11 +57,15 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
     const keys = keysRef.current;
     const cs = carState.current;
     const now = performance.now();
+    const gs = getGameState();
 
-    const accelerating = keys.ArrowUp || keys.KeyW;
-    const braking = keys.ArrowDown || keys.KeyS;
-    const steerLeft = keys.ArrowLeft || keys.KeyA;
-    const steerRight = keys.ArrowRight || keys.KeyD;
+    // Lock controls during countdown
+    const locked = gs.countdownActive;
+
+    const accelerating = !locked && (keys.ArrowUp || keys.KeyW);
+    const braking = !locked && (keys.ArrowDown || keys.KeyS);
+    const steerLeft = !locked && (keys.ArrowLeft || keys.KeyA);
+    const steerRight = !locked && (keys.ArrowRight || keys.KeyD);
 
     // Acceleration / braking
     if (accelerating) {
@@ -68,6 +80,12 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
     } else {
       cs.speed *= 1 - 0.55 * dt;
       if (Math.abs(cs.speed) < 0.05) cs.speed = 0;
+    }
+
+    // During countdown: slowly decay any existing speed
+    if (locked) {
+      cs.speed *= 1 - 0.9 * dt;
+      if (Math.abs(cs.speed) < 0.01) cs.speed = 0;
     }
 
     // Steering
@@ -88,6 +106,34 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
     // Move position
     cs.position.x += Math.sin(cs.rotation) * cs.speed * dt;
     cs.position.z += Math.cos(cs.rotation) * cs.speed * dt;
+
+    // ---- Collision detection against AI cars ----
+    if (!locked) {
+      for (const aiPos of aiPositionsRef.current) {
+        const dx = cs.position.x - aiPos.x;
+        const dz = cs.position.z - aiPos.z;
+        const dist = Math.sqrt(dx * dx + dz * dz);
+        if (dist < COLLISION_DIST && dist > 0.01) {
+          // Normalised push direction (away from AI car)
+          const nx = dx / dist;
+          const nz = dz / dist;
+          // Penetration depth
+          const overlap = COLLISION_DIST - dist;
+          // Push position apart
+          cs.position.x += nx * overlap * 0.6;
+          cs.position.z += nz * overlap * 0.6;
+          // Apply speed impulse proportional to overlap (bump)
+          const dotSpeed =
+            Math.sin(cs.rotation) * nx + Math.cos(cs.rotation) * nz;
+          const impactForce = overlap * 6;
+          cs.speed += dotSpeed > 0 ? -impactForce : impactForce * 0.3;
+          // Clamp speed
+          cs.speed = Math.max(-12, Math.min(42, cs.speed));
+          // Small rotation jolt
+          cs.rotation += (Math.random() - 0.5) * overlap * 0.12;
+        }
+      }
+    }
 
     // Apply to mesh
     if (carGroupRef.current) {
@@ -112,9 +158,6 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
       rearRightRef.current.children[0].rotation.z -= spinAmount;
 
     // ---- Lap detection ----
-    // Detect crossing the start/finish line (z = TRACK.startLineZ)
-    // Car must be on the main straight (x roughly in [-8, 8])
-    // and must be traveling forward (speed > 2 m/s)
     const carX = cs.position.x;
     const carZ = cs.position.z;
     const sfZ = TRACK.startLineZ;
@@ -126,24 +169,21 @@ export default function Car({ keysRef, carGroupRef }: CarProps) {
 
     if (crossedForward) {
       if (!_lapActive) {
-        // First crossing: start the timer
         _lapActive = true;
         _lapStartTime = now;
         setGameState({ lapStartTime: now, lapCount: 1 });
       } else if (_lapStartTime !== null) {
-        // Subsequent crossings: record lap
         const lapTimeSec = (now - _lapStartTime) / 1000;
-        const gs = getGameState();
+        const lapGs = getGameState();
         const isNewBest =
-          gs.bestLapTime === null || lapTimeSec < gs.bestLapTime;
-        const newBest = isNewBest ? lapTimeSec : gs.bestLapTime;
+          lapGs.bestLapTime === null || lapTimeSec < lapGs.bestLapTime;
+        const newBest = isNewBest ? lapTimeSec : lapGs.bestLapTime;
         _lapStartTime = now;
         setGameState({
-          lapCount: gs.lapCount + 1,
+          lapCount: lapGs.lapCount + 1,
           currentLapTime: 0,
           bestLapTime: newBest,
           lapStartTime: now,
-          // If it's a new best, mark as pending submission
           ...(isNewBest ? { newBestPending: true } : {}),
         });
       }

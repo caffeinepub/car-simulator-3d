@@ -1,15 +1,10 @@
 import { useFrame } from "@react-three/fiber";
 import { useRef } from "react";
 import type * as THREE from "three";
+import { getGameState } from "../../store/gameStore";
 import { TRACK } from "./World";
 
 // Track parameterization
-// The oval has:
-//   Main straight (x=0): z from +120 down to -120
-//   Bottom curve: center=(45, 0, -120), radius=45, from x=0 to x=90
-//   Back straight (x=90): z from -120 up to +120
-//   Top curve: center=(45, 0, +120), radius=45, from x=90 to x=0
-
 const straightLen = 2 * TRACK.straightHalfLen; // 240
 const curveLen = Math.PI * TRACK.curveRadius; // ~141.4
 const totalLen = 2 * straightLen + 2 * curveLen;
@@ -24,7 +19,6 @@ function trackPoint(t: number): { x: number; z: number; angle: number } {
   // top curve: 621..762
 
   if (d < s1) {
-    // Main straight: x=0, z goes from +120 down to -120
     const frac = d / s1;
     return {
       x: 0,
@@ -33,7 +27,6 @@ function trackPoint(t: number): { x: number; z: number; angle: number } {
     };
   }
   if (d < c1) {
-    // Bottom curve: center=(45, 0, -120)
     const frac = (d - s1) / curveLen;
     const a = Math.PI - frac * Math.PI;
     return {
@@ -43,7 +36,6 @@ function trackPoint(t: number): { x: number; z: number; angle: number } {
     };
   }
   if (d < s2) {
-    // Back straight: x=90, z goes from -120 up to +120
     const frac = (d - c1) / s1;
     return {
       x: TRACK.curveRadius * 2,
@@ -51,7 +43,6 @@ function trackPoint(t: number): { x: number; z: number; angle: number } {
       angle: 0,
     };
   }
-  // Top curve: center=(45, 0, +120)
   const frac = (d - s2) / curveLen;
   const a = frac * Math.PI;
   return {
@@ -61,8 +52,14 @@ function trackPoint(t: number): { x: number; z: number; angle: number } {
   };
 }
 
-// AI car configs (stable keys use color)
-const AI_CARS = [
+interface AICarConfig {
+  tSpeed: number;
+  tOffset: number;
+  color: string;
+  roofColor: string;
+}
+
+const AI_CARS: AICarConfig[] = [
   { tSpeed: 0.065, tOffset: 0.1, color: "#8B0000", roofColor: "#5a0000" },
   { tSpeed: 0.085, tOffset: 0.4, color: "#006400", roofColor: "#004000" },
   { tSpeed: 0.075, tOffset: 0.7, color: "#8B4513", roofColor: "#5a2d0c" },
@@ -71,15 +68,39 @@ const AI_CARS = [
 // Module-level mutable t positions to avoid re-renders
 const aiT = AI_CARS.map((c) => c.tOffset);
 
-function AICar({
-  color,
-  roofColor,
-  groupRef,
-}: {
+interface SingleAICarProps {
+  carIndex: number;
   color: string;
   roofColor: string;
-  groupRef: React.RefObject<THREE.Group | null>;
-}) {
+  aiPositionsRef: React.MutableRefObject<THREE.Vector3[]>;
+}
+
+// Each AI car is its own component so hooks are called at top level
+function SingleAICar({
+  carIndex,
+  color,
+  roofColor,
+  aiPositionsRef,
+}: SingleAICarProps) {
+  const groupRef = useRef<THREE.Group>(null);
+
+  useFrame((_, delta) => {
+    const dt = Math.min(delta, 0.05);
+    const { countdownActive } = getGameState();
+
+    if (!countdownActive) {
+      aiT[carIndex] = (aiT[carIndex] + AI_CARS[carIndex].tSpeed * dt) % 1;
+    }
+
+    const pt = trackPoint(aiT[carIndex]);
+    if (groupRef.current) {
+      groupRef.current.position.set(pt.x, 0.45, pt.z);
+      groupRef.current.rotation.y = -pt.angle;
+    }
+    // Write position into shared ref for collision detection
+    aiPositionsRef.current[carIndex].set(pt.x, 0.45, pt.z);
+  });
+
   return (
     <group ref={groupRef} position={[0, 0.45, 0]}>
       {/* Chassis */}
@@ -167,34 +188,20 @@ function AICar({
   );
 }
 
-export default function AITraffic() {
-  const groupRefs = [
-    useRef<THREE.Group>(null),
-    useRef<THREE.Group>(null),
-    useRef<THREE.Group>(null),
-  ];
+interface AITrafficProps {
+  aiPositionsRef: React.MutableRefObject<THREE.Vector3[]>;
+}
 
-  useFrame((_, delta) => {
-    const dt = Math.min(delta, 0.05);
-    for (let i = 0; i < AI_CARS.length; i++) {
-      aiT[i] = (aiT[i] + AI_CARS[i].tSpeed * dt) % 1;
-      const pt = trackPoint(aiT[i]);
-      const ref = groupRefs[i].current;
-      if (ref) {
-        ref.position.set(pt.x, 0.45, pt.z);
-        ref.rotation.y = -pt.angle;
-      }
-    }
-  });
-
+export default function AITraffic({ aiPositionsRef }: AITrafficProps) {
   return (
     <>
       {AI_CARS.map((car, i) => (
-        <AICar
+        <SingleAICar
           key={car.color}
+          carIndex={i}
           color={car.color}
           roofColor={car.roofColor}
-          groupRef={groupRefs[i]}
+          aiPositionsRef={aiPositionsRef}
         />
       ))}
     </>

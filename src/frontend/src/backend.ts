@@ -89,10 +89,34 @@ export class ExternalBlob {
         return this;
     }
 }
+export interface LeaderboardEntry {
+    rank: bigint;
+    name: string;
+    timeMs: bigint;
+    timestamp: bigint;
+}
 export interface backendInterface {
+    submitLapTime: (name: string, timeMs: bigint) => Promise<boolean>;
+    getLeaderboard: () => Promise<LeaderboardEntry[]>;
 }
 export class Backend implements backendInterface {
     constructor(private actor: ActorSubclass<_SERVICE>, private _uploadFile: (file: ExternalBlob) => Promise<Uint8Array>, private _downloadFile: (file: Uint8Array) => Promise<ExternalBlob>, private processError?: (error: unknown) => never){}
+    async submitLapTime(name: string, timeMs: bigint): Promise<boolean> {
+        try {
+            return await this.actor.submitLapTime(name, timeMs);
+        } catch(e) {
+            if (this.processError) this.processError(e);
+            throw e;
+        }
+    }
+    async getLeaderboard(): Promise<LeaderboardEntry[]> {
+        try {
+            return await this.actor.getLeaderboard();
+        } catch(e) {
+            if (this.processError) this.processError(e);
+            throw e;
+        }
+    }
 }
 export interface CreateActorOptions {
     agent?: Agent;

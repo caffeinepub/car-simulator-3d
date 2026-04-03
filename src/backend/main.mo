@@ -1,5 +1,6 @@
 import Array "mo:base/Array";
 import Time "mo:base/Time";
+import Order "mo:base/Order";
 
 actor {
   public type LeaderboardEntry = {
@@ -25,11 +26,11 @@ actor {
       timestamp = Time.now();
     };
 
-    // Append new entry using dot notation
-    let extended = entries.concat([newEntry]);
+    // Append new entry
+    let extended = Array.append(entries, [newEntry]);
 
-    // Sort by timeMs ascending using dot notation
-    let sorted = extended.sort(func(a : StoredEntry, b : StoredEntry) : { #less; #equal; #greater } {
+    // Sort by timeMs ascending
+    let sorted = Array.sort(extended, func(a : StoredEntry, b : StoredEntry) : Order.Order {
       if (a.timeMs < b.timeMs) { #less }
       else if (a.timeMs > b.timeMs) { #greater }
       else { #equal }
